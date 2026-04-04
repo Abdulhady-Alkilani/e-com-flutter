@@ -170,8 +170,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: product.stock > 0
-                            ? AppColors.success.withOpacity(0.15)
-                            : AppColors.error.withOpacity(0.15),
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.error.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

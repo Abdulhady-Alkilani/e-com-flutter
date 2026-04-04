@@ -28,10 +28,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   Future<void> _loadOrder() async {
     final order =
         await context.read<OrderProvider>().fetchOrderDetails(widget.orderId);
-    if (mounted) setState(() {
-      _order = order;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _order = order;
+        _isLoading = false;
+      });
+    }
   }
 
   @override

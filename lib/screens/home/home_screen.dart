@@ -1,13 +1,15 @@
 // lib/screens/home/home_screen.dart
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/favorite_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../screens/cart/cart_screen.dart';
-import '../../screens/profile/orders_screen.dart';
+import '../../screens/profile/profile_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/settings/network_settings_screen.dart';
 
@@ -20,7 +22,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _bottomNavIndex = 0;
-  final _searchCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -31,33 +32,24 @@ class _HomeScreenState extends State<HomeScreen> {
       final auth = context.read<AuthProvider>();
       if (auth.isAuthenticated) {
         context.read<CartProvider>().fetchCart();
+        context.read<FavoriteProvider>().fetchFavorites();
       }
     });
   }
 
   @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final authProvider = context.read<AuthProvider>();
-
-    final List<Widget> _screens = [
+    final List<Widget> screens = [
       const _HomeTab(),
       const _FavoriteTab(),
       const CartScreen(),
-      authProvider.isAuthenticated
-          ? const OrdersScreen()
-          : const LoginScreen(),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
       body: IndexedStack(
         index: _bottomNavIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: Consumer<CartProvider>(
         builder: (_, cart, __) => BottomNavigationBar(
@@ -85,9 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 label: 'السلة'),
             const BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long_outlined),
-                activeIcon: Icon(Icons.receipt_long),
-                label: 'طلباتي'),
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: 'حسابي'),
           ],
         ),
       ),
@@ -96,8 +88,21 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ─── Home Tab ──────────────────────────────────────────────────────────────
-class _HomeTab extends StatelessWidget {
+class _HomeTab extends StatefulWidget {
   const _HomeTab();
+
+  @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +112,7 @@ class _HomeTab extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: 'إعدادات الشبكة',
             onPressed: () {
               Navigator.push(
                 context,
@@ -118,6 +124,7 @@ class _HomeTab extends StatelessWidget {
             builder: (_, auth, __) => auth.isAuthenticated
                 ? IconButton(
                     icon: const Icon(Icons.logout),
+                    tooltip: 'تسجيل الخروج',
                     onPressed: () async {
                       await context.read<AuthProvider>().logout();
                       if (context.mounted) {
@@ -144,10 +151,21 @@ class _HomeTab extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
+              controller: _searchCtrl,
               decoration: InputDecoration(
                 hintText: 'ابحث عن منتج...',
                 prefixIcon:
                     const Icon(Icons.search, color: AppColors.primary),
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          context.read<ProductProvider>().search('');
+                          setState(() {});
+                        },
+                      )
+                    : null,
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -155,11 +173,17 @@ class _HomeTab extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
               ),
+              onChanged: (q) {
+                setState(() {});
+                if (q.isEmpty) {
+                  context.read<ProductProvider>().search('');
+                }
+              },
               onSubmitted: (q) =>
                   context.read<ProductProvider>().search(q),
             ),
           ),
-          // ─── Categories ───────────────────────────────────────────────
+          // ─── Categories Filter ─────────────────────────────────────────
           Consumer<ProductProvider>(
             builder: (_, prod, __) {
               if (prod.categories.isEmpty) return const SizedBox.shrink();
@@ -211,18 +235,34 @@ class _HomeTab extends StatelessWidget {
                     ),
                   );
                 }
-                return GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.75,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () =>
+                      prod.fetchProducts(refresh: true),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.75,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: prod.products.length +
+                        (prod.hasMorePages ? 1 : 0),
+                    itemBuilder: (_, i) {
+                      if (i == prod.products.length) {
+                        // Load more trigger
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          prod.fetchProducts();
+                        });
+                        return const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.primary));
+                      }
+                      return ProductCard(product: prod.products[i]);
+                    },
                   ),
-                  itemCount: prod.products.length,
-                  itemBuilder: (_, i) =>
-                      ProductCard(product: prod.products[i]),
                 );
               },
             ),
@@ -287,7 +327,8 @@ class _FavoriteTabState extends State<_FavoriteTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthProvider>();
       if (auth.isAuthenticated) {
-        context.read<dynamic>().fetchFavorites();
+        // ✅ FIX: use correct type FavoriteProvider instead of dynamic
+        context.read<FavoriteProvider>().fetchFavorites();
       }
     });
   }
@@ -299,22 +340,180 @@ class _FavoriteTabState extends State<_FavoriteTab> {
     if (!auth.isAuthenticated) {
       return Scaffold(
         appBar: AppBar(title: const Text('المفضلة')),
-        body: const Center(
-          child: Text('يجب تسجيل الدخول لعرض المفضلة',
-              style: TextStyle(color: AppColors.textSecondary)),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.favorite_border,
+                  size: 80, color: AppColors.textSecondary),
+              const SizedBox(height: 16),
+              const Text('يجب تسجيل الدخول لعرض المفضلة',
+                  style: TextStyle(color: AppColors.textSecondary)),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen())),
+                child: const Text('تسجيل الدخول'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
+    // ✅ FIX: use correct Consumer<FavoriteProvider> and display actual favorites list
     return Scaffold(
-      appBar: AppBar(title: const Text('المفضلة')),
-      body: Consumer(
+      appBar: AppBar(
+        title: const Text('المفضلة'),
+        actions: [
+          Consumer<FavoriteProvider>(
+            builder: (_, fav, __) => fav.favorites.isNotEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Center(
+                      child: Badge(
+                        label: Text('${fav.favorites.length}'),
+                        child: const Icon(Icons.favorite,
+                            color: Colors.white),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+      body: Consumer<FavoriteProvider>(
         builder: (context, favoriteProvider, _) {
-          return const Center(
-            child: Text('قائمة المفضلة',
-                style: TextStyle(color: AppColors.textSecondary)),
+          if (favoriteProvider.isLoading) {
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary));
+          }
+
+          if (favoriteProvider.favorites.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_border,
+                      size: 80, color: AppColors.textSecondary),
+                  SizedBox(height: 16),
+                  Text('قائمة المفضلة فارغة',
+                      style: TextStyle(
+                          fontSize: 18, color: AppColors.textSecondary)),
+                  SizedBox(height: 8),
+                  Text('أضف منتجات تعجبك بالضغط على ❤️',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            color: AppColors.primary,
+            onRefresh: () => favoriteProvider.fetchFavorites(),
+            child: GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.8,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: favoriteProvider.favorites.length,
+              itemBuilder: (_, i) {
+                final product = favoriteProvider.favorites[i];
+                return _FavoriteCard(
+                  product: product,
+                  onRemove: () =>
+                      favoriteProvider.toggleFavorite(product.id),
+                );
+              },
+            ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _FavoriteCard extends StatelessWidget {
+  final dynamic product;
+  final VoidCallback onRemove;
+
+  const _FavoriteCard({required this.product, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image with remove button
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                child: CachedNetworkImage(
+                  imageUrl: product.mainImage ?? '',
+                  height: 130,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                      color: AppColors.shimmerBase, height: 130),
+                  errorWidget: (_, __, ___) => Container(
+                    color: AppColors.shimmerBase,
+                    height: 130,
+                    child: const Icon(Icons.image_not_supported,
+                        color: AppColors.textSecondary),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 6,
+                right: 6,
+                child: GestureDetector(
+                  onTap: onRemove,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.favorite,
+                        color: AppColors.accent, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Name
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              product.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

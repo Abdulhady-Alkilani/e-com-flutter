@@ -38,6 +38,7 @@ class _SplashScreenState extends State<SplashScreen>
     await authProvider.checkAuthStatus();
 
     // Load settings in background
+    if (!mounted) return;
     context.read<SettingsProvider>().fetchSettings();
 
     if (!mounted) return;
@@ -73,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen>
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.shopping_bag_rounded,
@@ -92,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen>
               Text(
                 'تسوّق بكل يسر وأمان',
                 style: TextStyle(
-                    color: Colors.white.withOpacity(0.8), fontSize: 16),
+                    color: Colors.white.withValues(alpha: 0.8), fontSize: 16),
               ),
               const SizedBox(height: 60),
               const CircularProgressIndicator(

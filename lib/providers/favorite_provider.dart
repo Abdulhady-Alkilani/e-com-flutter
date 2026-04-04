@@ -65,9 +65,13 @@ class FavoriteProvider extends ChangeNotifier {
       try {
         await _dio.post(ApiConstants.favorites,
             data: {'product_id': productId});
-      } catch (_) {
-        _favoriteIds.remove(productId);
-        notifyListeners();
+        // 200 on duplicate is acceptable — already in favorites, no rollback needed
+      } on DioException catch (e) {
+        // Only rollback on non-200 error responses
+        if (e.response?.statusCode != 200) {
+          _favoriteIds.remove(productId);
+          notifyListeners();
+        }
       }
     }
   }

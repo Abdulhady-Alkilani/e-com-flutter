@@ -50,7 +50,19 @@ class CartProvider extends ChangeNotifier {
       await fetchCart();
       return true;
     } on DioException catch (e) {
-      _errorMessage = e.message;
+      // Handle 422 out-of-stock error explicitly
+      final errors = e.response?.data?['errors'];
+      if (e.response?.statusCode == 422 && errors != null) {
+        if (errors['stock'] != null) {
+          _errorMessage = 'المنتج غير متوفر في المخزون';
+        } else if (errors['cart'] != null) {
+          _errorMessage = 'السلة فارغة';
+        } else {
+          _errorMessage = 'خطأ في البيانات المدخلة';
+        }
+      } else {
+        _errorMessage = e.message;
+      }
       notifyListeners();
       return false;
     }

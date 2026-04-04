@@ -152,7 +152,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.05), blurRadius: 6)
+                        color: Colors.black.withValues(alpha: 0.05), blurRadius: 6)
                   ],
                 ),
                 child: Column(
@@ -205,7 +205,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.05), blurRadius: 6)
+                        color: Colors.black.withValues(alpha: 0.05), blurRadius: 6)
                   ],
                 ),
                 child: Column(
@@ -276,7 +276,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   decoration: BoxDecoration(
                     color: checkout.receiptImage != null
                         ? Colors.transparent
-                        : AppColors.primary.withOpacity(0.06),
+                        : AppColors.primary.withValues(alpha: 0.06),
                     border: Border.all(
                       color: checkout.receiptImage != null
                           ? AppColors.success
