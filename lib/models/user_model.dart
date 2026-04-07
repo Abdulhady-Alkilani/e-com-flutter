@@ -18,13 +18,27 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    String? sanitizeUrl(String? url) {
+      if (url == null || url.isEmpty) return null;
+      if (url.contains('localhost')) {
+        return url.replaceAll('localhost', '10.140.183.183');
+      }
+      if (url.contains('127.0.0.1')) {
+        return url.replaceAll('127.0.0.1', '10.140.183.183');
+      }
+      if (!url.startsWith('http')) {
+        return 'http://10.140.183.183:8000/storage/$url';
+      }
+      return url;
+    }
+
     return UserModel(
       id: json['id'] as int,
       name: json['name'] as String,
       email: json['email'] as String,
       phone: json['phone'] as String?,
       role: json['role'] as String? ?? 'user',
-      avatar: json['avatar'] as String?,
+      avatar: sanitizeUrl(json['avatar'] as String?),
     );
   }
 

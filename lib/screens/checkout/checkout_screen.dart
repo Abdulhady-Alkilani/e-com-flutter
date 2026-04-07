@@ -2,6 +2,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../core/constants/app_theme.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/checkout_provider.dart';
@@ -22,6 +24,68 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+
+  bool _isFetchingLocation = false;
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isFetchingLocation = true;
+    });
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'خدمة الموقع غير مفعلة. يرجى تفعيلها أولاً.';
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw 'تم رفض صلاحية الوصول للموقع.';
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw 'صلاحية الوصول للموقع مرفوضة دائماً. يرجى تفعيلها من الإعدادات.';
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude, position.longitude);
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        String address = '';
+        if (place.street != null && place.street!.isNotEmpty) address += '${place.street}, ';
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) address += '${place.subLocality}, ';
+        if (place.locality != null && place.locality!.isNotEmpty) address += '${place.locality}, ';
+        if (place.country != null && place.country!.isNotEmpty) address += place.country!;
+        
+        setState(() {
+          _addressCtrl.text = address.endsWith(', ') ? address.substring(0, address.length - 2) : address;
+        });
+      } else {
+        throw 'لم يتم العثور على عنوان للموقع الحالي.';
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFetchingLocation = false;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -316,6 +380,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 label: 'عنوان الشحن',
                 controller: _addressCtrl,
                 prefixIcon: Icons.location_on_outlined,
+                suffixIcon: IconButton(
+                  icon: _isFetchingLocation
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.my_location, color: AppColors.primary),
+                  onPressed: _isFetchingLocation ? null : _getCurrentLocation,
+                  tooltip: 'تحديد موقعي الحالي',
+                ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'العنوان مطلوب' : null,
               ),

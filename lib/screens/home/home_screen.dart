@@ -7,11 +7,14 @@ import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/favorite_provider.dart';
+import '../../providers/order_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../screens/cart/cart_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/settings/network_settings_screen.dart';
+import '../../core/localization/app_localizations.dart';
+import 'product_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (auth.isAuthenticated) {
         context.read<CartProvider>().fetchCart();
         context.read<FavoriteProvider>().fetchFavorites();
+        context.read<OrderProvider>().fetchOrders();
       }
     });
   }
@@ -42,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> screens = [
       const _HomeTab(),
       const _FavoriteTab(),
-      const CartScreen(),
       const ProfileScreen(),
     ];
 
@@ -51,35 +54,39 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _bottomNavIndex,
         children: screens,
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CartScreen()),
+          );
+        },
+        backgroundColor: AppColors.primary,
+        child: Consumer<CartProvider>(
+          builder: (_, cart, __) => Badge(
+            label: Text('${cart.itemCount}'),
+            isLabelVisible: cart.itemCount > 0,
+            child: const Icon(Icons.shopping_cart, color: Colors.white),
+          ),
+        ),
+      ),
       bottomNavigationBar: Consumer<CartProvider>(
         builder: (_, cart, __) => BottomNavigationBar(
           currentIndex: _bottomNavIndex,
           onTap: (i) => setState(() => _bottomNavIndex = i),
           items: [
-            const BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'الرئيسية'),
-            const BottomNavigationBarItem(
-                icon: Icon(Icons.favorite_border),
-                activeIcon: Icon(Icons.favorite),
-                label: 'المفضلة'),
             BottomNavigationBarItem(
-                icon: Badge(
-                  label: Text('${cart.itemCount}'),
-                  isLabelVisible: cart.itemCount > 0,
-                  child: const Icon(Icons.shopping_cart_outlined),
-                ),
-                activeIcon: Badge(
-                  label: Text('${cart.itemCount}'),
-                  isLabelVisible: cart.itemCount > 0,
-                  child: const Icon(Icons.shopping_cart),
-                ),
-                label: 'السلة'),
-            const BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'حسابي'),
+                icon: const Icon(Icons.home_outlined),
+                activeIcon: const Icon(Icons.home),
+                label: context.tr('home')),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.favorite_border),
+                activeIcon: const Icon(Icons.favorite),
+                label: context.tr('favorites')),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.person_outline),
+                activeIcon: const Icon(Icons.person),
+                label: context.tr('profile')),
           ],
         ),
       ),
@@ -108,11 +115,11 @@ class _HomeTabState extends State<_HomeTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المتجر الإلكتروني'),
+        title: Text(context.tr('app_name')),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            tooltip: 'إعدادات الشبكة',
+            tooltip: context.tr('network_settings'),
             onPressed: () {
               Navigator.push(
                 context,
@@ -139,8 +146,8 @@ class _HomeTabState extends State<_HomeTab> {
                 : TextButton(
                     onPressed: () => Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const LoginScreen())),
-                    child: const Text('دخول',
-                        style: TextStyle(color: Colors.white)),
+                    child: Text(context.tr('login'),
+                        style: const TextStyle(color: Colors.white)),
                   ),
           ),
         ],
@@ -153,7 +160,7 @@ class _HomeTabState extends State<_HomeTab> {
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
-                hintText: 'ابحث عن منتج...',
+                hintText: context.tr('search_product'),
                 prefixIcon:
                     const Icon(Icons.search, color: AppColors.primary),
                 suffixIcon: _searchCtrl.text.isNotEmpty
@@ -196,7 +203,7 @@ class _HomeTabState extends State<_HomeTab> {
                   itemBuilder: (_, i) {
                     if (i == 0) {
                       return _CategoryChip(
-                        label: 'الكل',
+                        label: context.tr('all'),
                         isSelected: prod.selectedCategoryId == null,
                         onTap: () => prod.filterByCategory(null),
                       );
@@ -222,15 +229,15 @@ class _HomeTabState extends State<_HomeTab> {
                           color: AppColors.primary));
                 }
                 if (prod.products.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off,
+                        const Icon(Icons.search_off,
                             size: 64, color: AppColors.textSecondary),
-                        SizedBox(height: 12),
-                        Text('لا توجد منتجات',
-                            style: TextStyle(color: AppColors.textSecondary)),
+                        const SizedBox(height: 12),
+                        Text(context.tr('no_products'),
+                            style: const TextStyle(color: AppColors.textSecondary)),
                       ],
                     ),
                   );
@@ -339,7 +346,7 @@ class _FavoriteTabState extends State<_FavoriteTab> {
 
     if (!auth.isAuthenticated) {
       return Scaffold(
-        appBar: AppBar(title: const Text('المفضلة')),
+        appBar: AppBar(title: Text(context.tr('favorites'))),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -347,13 +354,13 @@ class _FavoriteTabState extends State<_FavoriteTab> {
               const Icon(Icons.favorite_border,
                   size: 80, color: AppColors.textSecondary),
               const SizedBox(height: 16),
-              const Text('يجب تسجيل الدخول لعرض المفضلة',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              Text(context.tr('must_login'),
+                  style: const TextStyle(color: AppColors.textSecondary)),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const LoginScreen())),
-                child: const Text('تسجيل الدخول'),
+                child: Text(context.tr('login')),
               ),
             ],
           ),
@@ -364,7 +371,7 @@ class _FavoriteTabState extends State<_FavoriteTab> {
     // ✅ FIX: use correct Consumer<FavoriteProvider> and display actual favorites list
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المفضلة'),
+        title: Text(context.tr('favorites')),
         actions: [
           Consumer<FavoriteProvider>(
             builder: (_, fav, __) => fav.favorites.isNotEmpty
@@ -390,19 +397,19 @@ class _FavoriteTabState extends State<_FavoriteTab> {
           }
 
           if (favoriteProvider.favorites.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.favorite_border,
+                  const Icon(Icons.favorite_border,
                       size: 80, color: AppColors.textSecondary),
-                  SizedBox(height: 16),
-                  Text('قائمة المفضلة فارغة',
-                      style: TextStyle(
+                  const SizedBox(height: 16),
+                  Text(context.tr('empty_favorites'),
+                      style: const TextStyle(
                           fontSize: 18, color: AppColors.textSecondary)),
-                  SizedBox(height: 8),
-                  Text('أضف منتجات تعجبك بالضغط على ❤️',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
+                  Text(context.tr('empty_favorites_desc'),
+                      style: const TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
             );
@@ -445,9 +452,16 @@ class _FavoriteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProductDetailsScreen(productId: product.id),
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -515,6 +529,7 @@ class _FavoriteCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

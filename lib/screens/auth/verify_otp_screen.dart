@@ -89,7 +89,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               const SizedBox(height: 40),
               TextField(
                 controller: _codeCtrl,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.text,
                 maxLength: 6,
                 textAlign: TextAlign.center,
                 style:

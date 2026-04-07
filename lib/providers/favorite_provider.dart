@@ -17,22 +17,17 @@ class FavoriteProvider extends ChangeNotifier {
 
   bool isFavorite(int productId) => _favoriteIds.contains(productId);
 
-  Future<void> fetchFavorites() async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> fetchFavorites({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      notifyListeners();
+    }
     try {
       final response = await _dio.get(ApiConstants.favorites);
       final data = response.data['data'] as List? ?? [];
-      _favorites = data.map((e) {
-        final item = e as Map<String, dynamic>;
-        return ProductModel(
-          id: item['product_id'] as int,
-          name: item['name'] as String,
-          price: 0,
-          stock: 0,
-          mainImage: item['main_image'] as String?,
-        );
-      }).toList();
+      _favorites = data
+          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+          .toList();
       _favoriteIds.clear();
       for (final f in _favorites) {
         _favoriteIds.add(f.id);
@@ -40,8 +35,10 @@ class FavoriteProvider extends ChangeNotifier {
       notifyListeners();
     } catch (_) {
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!silent) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -66,6 +63,8 @@ class FavoriteProvider extends ChangeNotifier {
         await _dio.post(ApiConstants.favorites,
             data: {'product_id': productId});
         // 200 on duplicate is acceptable — already in favorites, no rollback needed
+        // Refetch silently to update _favorites list so UI updates correctly
+        await fetchFavorites(silent: true);
       } on DioException catch (e) {
         // Only rollback on non-200 error responses
         if (e.response?.statusCode != 200) {

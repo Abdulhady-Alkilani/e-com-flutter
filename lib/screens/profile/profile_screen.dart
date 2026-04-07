@@ -1,11 +1,15 @@
-// lib/screens/profile/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_theme.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/favorite_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../auth/login_screen.dart';
 import 'orders_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -16,7 +20,7 @@ class ProfileScreen extends StatelessWidget {
 
     if (!auth.isAuthenticated) {
       return Scaffold(
-        appBar: AppBar(title: const Text('حسابي')),
+        appBar: AppBar(title: Text(context.tr('profile'))),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -31,14 +35,14 @@ class ProfileScreen extends StatelessWidget {
                     size: 80, color: AppColors.primary),
               ),
               const SizedBox(height: 24),
-              const Text('مرحباً بك في متجرنا',
-                  style: TextStyle(
+              Text(context.tr('welcome'),
+                  style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary)),
               const SizedBox(height: 8),
-              const Text('سجّل دخولك للوصول لحسابك وطلباتك',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              Text(context.tr('welcome_desc'),
+                  style: const TextStyle(color: AppColors.textSecondary)),
               const SizedBox(height: 32),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -46,7 +50,7 @@ class ProfileScreen extends StatelessWidget {
                   onPressed: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const LoginScreen())),
                   icon: const Icon(Icons.login),
-                  label: const Text('تسجيل الدخول'),
+                  label: Text(context.tr('login')),
                 ),
               ),
             ],
@@ -59,20 +63,16 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حسابي'),
+        title: Text(context.tr('profile')),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'تسجيل الخروج',
-            onPressed: () async {
-              await context.read<AuthProvider>().logout();
-              if (context.mounted) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
+            icon: const Icon(Icons.edit),
+            tooltip: context.tr('edit_profile'),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
             },
           ),
         ],
@@ -92,46 +92,57 @@ class ProfileScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
               ),
               child: Column(
                 children: [
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 90,
+                    height: 90,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      image: user?.avatar != null
+                          ? DecorationImage(
+                              image: CachedNetworkImageProvider(user!.avatar!),
+                              fit: BoxFit.cover)
+                          : null,
                     ),
-                    child: const Icon(Icons.person, size: 48, color: Colors.white),
+                    child: user?.avatar == null
+                        ? const Icon(Icons.person, size: 50, color: Colors.white)
+                        : null,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Text(
-                    user?.name ?? 'المستخدم',
+                    user?.name ?? '',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     user?.email ?? '',
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
-                  if (user?.phone != null) ...[
+                  if (user?.phone != null && user!.phone!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.phone, size: 14, color: Colors.white70),
+                        Icon(Icons.phone, size: 14, color: Colors.white.withValues(alpha: 0.8)),
                         const SizedBox(width: 4),
                         Text(
-                          user!.phone!,
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          user.phone!,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 13,
                           ),
                         ),
@@ -144,21 +155,21 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // ─── Quick Stats ──────────────────────────────────────────────
-            Consumer<OrderProvider>(
-              builder: (_, orderProvider, __) {
+            Consumer2<OrderProvider, FavoriteProvider>(
+              builder: (_, orderProvider, favoriteProvider, __) {
                 return Row(
                   children: [
                     _StatCard(
                       icon: Icons.shopping_bag_outlined,
-                      label: 'طلباتي',
+                      label: context.tr('my_orders'),
                       value: '${orderProvider.orders.length}',
                       color: AppColors.primary,
                     ),
                     const SizedBox(width: 12),
                     _StatCard(
                       icon: Icons.favorite_border,
-                      label: 'المفضلة',
-                      value: '❤️',
+                      label: context.tr('favorites'),
+                      value: '${favoriteProvider.favorites.length}',
                       color: AppColors.accent,
                     ),
                   ],
@@ -183,8 +194,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   _MenuTile(
                     icon: Icons.receipt_long_outlined,
-                    title: 'طلباتي',
-                    subtitle: 'عرض جميع الطلبات السابقة',
+                    title: context.tr('my_orders'),
                     color: AppColors.primary,
                     onTap: () => Navigator.push(
                         context,
@@ -193,11 +203,17 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const Divider(height: 0, indent: 16, endIndent: 16),
                   _MenuTile(
-                    icon: Icons.info_outline,
-                    title: 'معلومات الحساب',
-                    subtitle: user?.email ?? '',
+                    icon: Icons.language,
+                    title: context.tr('change_language'),
+                    trailing: Consumer<LocaleProvider>(
+                        builder: (_, localeApp, __) => Text(
+                              localeApp.isArabic ? 'English' : 'العربية',
+                              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                            )),
                     color: AppColors.primary,
-                    onTap: () {},
+                    onTap: () {
+                      context.read<LocaleProvider>().toggleLanguage();
+                    },
                   ),
                 ],
               ),
@@ -217,8 +233,8 @@ class ProfileScreen extends StatelessWidget {
                 }
               },
               icon: const Icon(Icons.logout, color: AppColors.error),
-              label: const Text('تسجيل الخروج',
-                  style: TextStyle(color: AppColors.error)),
+              label: Text(context.tr('logout'),
+                  style: const TextStyle(color: AppColors.error)),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.error),
                 minimumSize: const Size(double.infinity, 50),
@@ -226,6 +242,7 @@ class ProfileScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12)),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -283,16 +300,16 @@ class _StatCard extends StatelessWidget {
 class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String subtitle;
   final Color color;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   const _MenuTile({
     required this.icon,
     required this.title,
-    required this.subtitle,
     required this.color,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -310,11 +327,9 @@ class _MenuTile extends StatelessWidget {
       title: Text(title,
           style: const TextStyle(
               fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-      subtitle: Text(subtitle,
-          style: const TextStyle(
-              color: AppColors.textSecondary, fontSize: 12)),
-      trailing: const Icon(Icons.arrow_forward_ios,
-          size: 14, color: AppColors.textSecondary),
+      trailing: trailing ??
+          const Icon(Icons.arrow_forward_ios,
+              size: 14, color: AppColors.textSecondary),
       onTap: onTap,
     );
   }

@@ -14,11 +14,25 @@ class CartItemProduct {
   });
 
   factory CartItemProduct.fromJson(Map<String, dynamic> json) {
+    String? sanitizeUrl(String? url) {
+      if (url == null || url.isEmpty) return null;
+      if (url.contains('localhost')) {
+        return url.replaceAll('localhost', '10.140.183.183');
+      }
+      if (url.contains('127.0.0.1')) {
+        return url.replaceAll('127.0.0.1', '10.140.183.183');
+      }
+      if (!url.startsWith('http')) {
+        return 'http://10.140.183.183:8000/storage/$url';
+      }
+      return url;
+    }
+
     return CartItemProduct(
       id: json['id'] as int,
       name: json['name'] as String,
       price: double.tryParse(json['price'].toString()) ?? 0.0,
-      mainImage: json['main_image'] as String?,
+      mainImage: sanitizeUrl(json['main_image'] as String?),
     );
   }
 }
@@ -38,7 +52,7 @@ class CartItemModel {
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
     return CartItemModel(
-      cartItemId: json['cart_item_id'] as int,
+      cartItemId: (json['id'] ?? json['cart_item_id']) as int,
       product: CartItemProduct.fromJson(
         json['product'] as Map<String, dynamic>,
       ),

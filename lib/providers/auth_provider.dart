@@ -124,4 +124,46 @@ class AuthProvider extends ChangeNotifier {
     _isAuthenticated = false;
     notifyListeners();
   }
+
+  /// Update Profile
+  Future<bool> updateProfile({
+    String? name,
+    String? email,
+    String? phone,
+    String? password,
+    String? passwordConfirmation,
+    String? avatarPath,
+  }) async {
+    _setLoading(true);
+    _setError(null);
+    try {
+      final formData = FormData.fromMap({
+        if (name != null && name.isNotEmpty) 'name': name,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (password != null && password.isNotEmpty) 'password': password,
+        if (passwordConfirmation != null && passwordConfirmation.isNotEmpty) 'password_confirmation': passwordConfirmation,
+        if (avatarPath != null)
+          'avatar': await MultipartFile.fromFile(avatarPath),
+      });
+
+      final response = await _dio.post(
+        '/profile/update',
+        data: formData,
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'] as Map<String, dynamic>;
+        _currentUser = UserModel.fromJson(data);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } on DioException catch (e) {
+      _setError(parseApiError(e.response?.data));
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
 }

@@ -11,6 +11,8 @@ import 'providers/checkout_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/config_provider.dart';
+import 'providers/locale_provider.dart';
+import 'core/localization/app_localizations.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -38,28 +40,34 @@ class ECommerceApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CheckoutProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
       ],
-      child: MaterialApp(
-        title: 'المتجر الإلكتروني',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        locale: const Locale('ar', 'SA'),
-        supportedLocales: const [
-          Locale('ar', 'SA'),
-          Locale('en', 'US'),
-        ],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        builder: (context, child) {
-          return Directionality(
-            textDirection: TextDirection.rtl,
-            child: child!,
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, child) {
+          return MaterialApp(
+            title: 'المتجر الإلكتروني',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            locale: localeProvider.locale,
+            supportedLocales: const [
+              Locale('ar'),
+              Locale('en'),
+            ],
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            builder: (context, child) {
+              return Directionality(
+                textDirection: localeProvider.isArabic ? TextDirection.rtl : TextDirection.ltr,
+                child: child!,
+              );
+            },
+            home: const SplashScreen(),
           );
         },
-        home: const SplashScreen(),
       ),
     );
   }

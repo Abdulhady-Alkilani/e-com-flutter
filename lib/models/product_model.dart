@@ -41,6 +41,21 @@ class ProductModel {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     final imagesList = json['images'] as List<dynamic>?;
+    
+    String? sanitizeUrl(String? url) {
+      if (url == null || url.isEmpty) return null;
+      if (url.contains('localhost')) {
+        return url.replaceAll('localhost', '10.140.183.183');
+      }
+      if (url.contains('127.0.0.1')) {
+        return url.replaceAll('127.0.0.1', '10.140.183.183');
+      }
+      if (!url.startsWith('http')) {
+        return 'http://10.140.183.183:8000/storage/$url';
+      }
+      return url;
+    }
+
     return ProductModel(
       id: json['id'] as int,
       categoryId: json['category_id'] as int?,
@@ -48,7 +63,7 @@ class ProductModel {
       description: json['description'] as String?,
       price: double.tryParse(json['price'].toString()) ?? 0.0,
       stock: json['stock'] as int? ?? 0,
-      mainImage: json['main_image'] as String?,
+      mainImage: sanitizeUrl(json['main_image'] as String?),
       externalLink: json['external_link'] as String?,
       isActive: json['is_active'] == true || json['is_active'] == 1,
       images: imagesList
