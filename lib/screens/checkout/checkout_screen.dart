@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_theme.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/checkout_provider.dart';
@@ -22,7 +23,7 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _addressCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController(text: '+963 ');
   final _notesCtrl = TextEditingController();
 
   bool _isFetchingLocation = false;
@@ -318,11 +319,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     if (settings.adminPhone != null) ...[
                       const SizedBox(height: 6),
-                      Text(
-                        'أو التواصل: ${settings.adminPhone}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary),
+                      GestureDetector(
+                        onTap: () async {
+                          try {
+                            final phoneStr = settings.adminPhone?.replaceAll(' ', '') ?? '';
+                            final Uri url = Uri.parse('tel:$phoneStr');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url);
+                            } else {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          } catch (e) {
+                            debugPrint('Could not launch phone app: $e');
+                          }
+                        },
+                        child: Text(
+                          'أو التواصل: ${settings.adminPhone}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                              decoration: TextDecoration.underline),
+                        ),
                       ),
                     ],
                   ],

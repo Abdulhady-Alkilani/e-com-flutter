@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -116,7 +117,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('edit_profile'))),
       body: auth.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const ShimmerForm()
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(

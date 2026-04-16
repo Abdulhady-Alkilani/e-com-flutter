@@ -1,5 +1,7 @@
 // lib/models/cart_model.dart
 
+import '../core/constants/api_constants.dart';
+
 class CartItemProduct {
   final int id;
   final String name;
@@ -17,13 +19,13 @@ class CartItemProduct {
     String? sanitizeUrl(String? url) {
       if (url == null || url.isEmpty) return null;
       if (url.contains('localhost')) {
-        return url.replaceAll('localhost', '10.140.183.183');
+        return url.replaceAll('localhost', ApiConstants.defaultIp);
       }
       if (url.contains('127.0.0.1')) {
-        return url.replaceAll('127.0.0.1', '10.140.183.183');
+        return url.replaceAll('127.0.0.1', ApiConstants.defaultIp);
       }
       if (!url.startsWith('http')) {
-        return 'http://10.140.183.183:8000/storage/$url';
+        return 'http://${ApiConstants.defaultIp}:${ApiConstants.defaultPort}/storage/$url';
       }
       return url;
     }

@@ -19,8 +19,12 @@ class CheckoutProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   Future<void> pickReceiptImage() async {
-    final XFile? picked =
-        await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
     if (picked != null) {
       _receiptImage = File(picked.path);
       notifyListeners();
@@ -29,7 +33,11 @@ class CheckoutProvider extends ChangeNotifier {
 
   Future<void> pickReceiptImageFromCamera() async {
     final XFile? picked = await _picker.pickImage(
-        source: ImageSource.camera, imageQuality: 80);
+      source: ImageSource.camera,
+      imageQuality: 70,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
     if (picked != null) {
       _receiptImage = File(picked.path);
       notifyListeners();

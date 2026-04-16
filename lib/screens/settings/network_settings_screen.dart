@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/config_provider.dart';
+import '../../core/constants/api_constants.dart';
 
 class NetworkSettingsScreen extends StatefulWidget {
   const NetworkSettingsScreen({super.key});
@@ -59,10 +60,10 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
               TextFormField(
                 controller: _ipController,
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'عنوان IP (مثال: 10.140.183.183)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.wifi),
+                decoration: InputDecoration(
+                  labelText: 'عنوان IP (مثال: ${ApiConstants.defaultIp})',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.wifi),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {

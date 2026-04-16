@@ -5,6 +5,7 @@ import '../../core/constants/app_theme.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
 import 'package:provider/provider.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   final int orderId;
@@ -41,8 +42,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('تفاصيل الطلب #${widget.orderId}')),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary))
+          ? const ShimmerProductDetails()
           : _order == null
               ? const Center(child: Text('لم يتم العثور على الطلب'))
               : _buildBody(),

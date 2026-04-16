@@ -9,6 +9,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final int productId;
@@ -23,11 +24,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   ProductModel? _product;
   bool _isLoading = true;
   int _selectedImageIndex = 0;
+  late final PageController _imagePageController;
 
   @override
   void initState() {
     super.initState();
+    _imagePageController = PageController(initialPage: _selectedImageIndex);
     _loadProduct();
+  }
+
+  @override
+  void dispose() {
+    _imagePageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProduct() async {
@@ -47,8 +56,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary))
+          ? const ShimmerProductDetails()
           : _product == null
               ? const Center(child: Text('المنتج غير موجود'))
               : _buildBody(),
@@ -93,13 +101,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ? Container(color: AppColors.shimmerBase,
                     child: const Icon(Icons.image_not_supported,
                         size: 80, color: AppColors.textSecondary))
-                : CachedNetworkImage(
-                    imageUrl: allImages[_selectedImageIndex],
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) =>
-                        Container(color: AppColors.shimmerBase),
-                    errorWidget: (_, __, ___) =>
-                        Container(color: AppColors.shimmerBase),
+                : PageView.builder(
+                    controller: _imagePageController,
+                    onPageChanged: (i) => setState(() => _selectedImageIndex = i),
+                    itemCount: allImages.length,
+                    itemBuilder: (context, i) {
+                      return Hero(
+                        tag: i == 0 ? 'product_image_${product.id}' : 'product_image_extra_${product.id}_$i',
+                        child: CachedNetworkImage(
+                          imageUrl: allImages[i],
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              Container(color: AppColors.shimmerBase),
+                          errorWidget: (_, __, ___) =>
+                              Container(color: AppColors.shimmerBase),
+                        ),
+                      );
+                    },
                   ),
           ),
         ),
@@ -113,7 +131,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 itemCount: allImages.length,
                 itemBuilder: (_, i) => GestureDetector(
-                  onTap: () => setState(() => _selectedImageIndex = i),
+                  onTap: () {
+                    setState(() => _selectedImageIndex = i);
+                    _imagePageController.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
                     width: 54,

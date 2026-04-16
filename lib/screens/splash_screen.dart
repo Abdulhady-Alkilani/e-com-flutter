@@ -7,6 +7,7 @@ import '../providers/settings_provider.dart';
 import 'auth/login_screen.dart';
 import 'home/home_screen.dart';
 import 'settings/network_settings_screen.dart';
+import 'package:shimmer/shimmer.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -96,8 +97,11 @@ class _SplashScreenState extends State<SplashScreen>
                     color: Colors.white.withValues(alpha: 0.8), fontSize: 16),
               ),
               const SizedBox(height: 60),
-              const CircularProgressIndicator(
-                  color: Colors.white, strokeWidth: 2),
+              Shimmer.fromColors(
+                baseColor: Colors.white70,
+                highlightColor: Colors.white,
+                child: const Text('جاري التهيئة...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ),
             ],
           ),
         ),

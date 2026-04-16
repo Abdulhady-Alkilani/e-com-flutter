@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../checkout/checkout_screen.dart';
 import '../auth/login_screen.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -61,8 +62,7 @@ class _CartScreenState extends State<CartScreen> {
       body: Consumer<CartProvider>(
         builder: (_, cart, __) {
           if (cart.isLoading && cart.items.isEmpty) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary));
+            return const ShimmerList();
           }
           if (cart.items.isEmpty) {
             return Center(

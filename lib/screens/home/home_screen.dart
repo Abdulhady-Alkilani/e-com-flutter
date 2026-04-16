@@ -14,6 +14,8 @@ import '../../screens/profile/profile_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/settings/network_settings_screen.dart';
 import '../../core/localization/app_localizations.dart';
+import 'package:shimmer/shimmer.dart';
+import '../../widgets/shimmer_loading.dart';
 import 'product_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -25,10 +27,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _bottomNavIndex = 0;
+  late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _bottomNavIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().fetchCategories();
       context.read<ProductProvider>().fetchProducts(refresh: true);
@@ -42,6 +46,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
       const _HomeTab(),
@@ -50,8 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _bottomNavIndex,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (i) => setState(() => _bottomNavIndex = i),
         children: screens,
       ),
       floatingActionButton: FloatingActionButton(
@@ -73,7 +84,14 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Consumer<CartProvider>(
         builder: (_, cart, __) => BottomNavigationBar(
           currentIndex: _bottomNavIndex,
-          onTap: (i) => setState(() => _bottomNavIndex = i),
+          onTap: (i) {
+            setState(() => _bottomNavIndex = i);
+            _pageController.animateToPage(
+              i,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          },
           items: [
             BottomNavigationBarItem(
                 icon: const Icon(Icons.home_outlined),
@@ -224,9 +242,26 @@ class _HomeTabState extends State<_HomeTab> {
             child: Consumer<ProductProvider>(
               builder: (_, prod, __) {
                 if (prod.isLoading && prod.products.isEmpty) {
-                  return const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary));
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.75,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (_, __) => Shimmer.fromColors(
+                      baseColor: Colors.grey.shade300,
+                      highlightColor: Colors.grey.shade100,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  );
                 }
                 if (prod.products.isEmpty) {
                   return Center(
@@ -242,34 +277,69 @@ class _HomeTabState extends State<_HomeTab> {
                     ),
                   );
                 }
-                return RefreshIndicator(
-                  color: AppColors.primary,
-                  onRefresh: () =>
-                      prod.fetchProducts(refresh: true),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(12),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                return Column(
+                  children: [
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: () => prod.fetchProducts(refresh: true),
+                        child: GridView.builder(
+                          padding: const EdgeInsets.all(12),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: prod.products.length,
+                          itemBuilder: (_, i) {
+                            return ProductCard(product: prod.products[i]);
+                          },
+                        ),
+                      ),
                     ),
-                    itemCount: prod.products.length +
-                        (prod.hasMorePages ? 1 : 0),
-                    itemBuilder: (_, i) {
-                      if (i == prod.products.length) {
-                        // Load more trigger
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          prod.fetchProducts();
-                        });
-                        return const Center(
-                            child: CircularProgressIndicator(
-                                color: AppColors.primary));
-                      }
-                      return ProductCard(product: prod.products[i]);
-                    },
-                  ),
+                    if (prod.lastPage > 1)
+                      Container(
+                        padding: const EdgeInsets.only(right: 16, left: 80, top: 12, bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: Size.zero,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: prod.hasPreviousPage && !prod.isLoading
+                                  ? () => prod.goToPreviousPage()
+                                  : null,
+                              child: const Text('السابق'),
+                            ),
+                            prod.isLoading
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                : Text(
+                                    '${prod.currentPage} / ${prod.lastPage}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
+                                  ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: Size.zero,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: prod.hasNextPage && !prod.isLoading
+                                  ? () => prod.goToNextPage()
+                                  : null,
+                              child: const Text('التالي'),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -391,9 +461,8 @@ class _FavoriteTabState extends State<_FavoriteTab> {
       ),
       body: Consumer<FavoriteProvider>(
         builder: (context, favoriteProvider, _) {
-          if (favoriteProvider.isLoading) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary));
+          if (favoriteProvider.isLoading && favoriteProvider.favorites.isEmpty) {
+            return const ShimmerGrid();
           }
 
           if (favoriteProvider.favorites.isEmpty) {
@@ -480,18 +549,21 @@ class _FavoriteCard extends StatelessWidget {
               ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(16)),
-                child: CachedNetworkImage(
-                  imageUrl: product.mainImage ?? '',
-                  height: 130,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                      color: AppColors.shimmerBase, height: 130),
-                  errorWidget: (_, __, ___) => Container(
-                    color: AppColors.shimmerBase,
+                child: Hero(
+                  tag: 'product_image_${product.id}',
+                  child: CachedNetworkImage(
+                    imageUrl: product.mainImage ?? '',
                     height: 130,
-                    child: const Icon(Icons.image_not_supported,
-                        color: AppColors.textSecondary),
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                        color: AppColors.shimmerBase, height: 130),
+                    errorWidget: (_, __, ___) => Container(
+                      color: AppColors.shimmerBase,
+                      height: 130,
+                      child: const Icon(Icons.image_not_supported,
+                          color: AppColors.textSecondary),
+                    ),
                   ),
                 ),
               ),

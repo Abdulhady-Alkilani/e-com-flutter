@@ -48,20 +48,23 @@ class ProductCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(16)),
-                  child: CachedNetworkImage(
-                    imageUrl: product.mainImage ?? '',
-                    height: 140,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      color: AppColors.shimmerBase,
+                  child: Hero(
+                    tag: 'product_image_${product.id}',
+                    child: CachedNetworkImage(
+                      imageUrl: product.mainImage ?? '',
                       height: 140,
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: AppColors.shimmerBase,
-                      height: 140,
-                      child: const Icon(Icons.image_not_supported,
-                          color: AppColors.textSecondary),
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        color: AppColors.shimmerBase,
+                        height: 140,
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: AppColors.shimmerBase,
+                        height: 140,
+                        child: const Icon(Icons.image_not_supported,
+                            color: AppColors.textSecondary),
+                      ),
                     ),
                   ),
                 ),

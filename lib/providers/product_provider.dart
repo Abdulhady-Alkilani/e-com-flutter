@@ -22,7 +22,10 @@ class ProductProvider extends ChangeNotifier {
   List<CategoryModel> get categories => _categories;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get hasMorePages => _currentPage < _lastPage;
+  int get currentPage => _currentPage;
+  int get lastPage => _lastPage;
+  bool get hasNextPage => _currentPage < _lastPage;
+  bool get hasPreviousPage => _currentPage > 1;
   int? get selectedCategoryId => _selectedCategoryId;
 
   void _setLoading(bool val) {
@@ -37,7 +40,23 @@ class ProductProvider extends ChangeNotifier {
       _categories =
           data.map((e) => CategoryModel.fromJson(e as Map<String, dynamic>)).toList();
       notifyListeners();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Categories Error: $e');
+    }
+  }
+
+  Future<void> goToNextPage() async {
+    if (hasNextPage) {
+      _currentPage++;
+      await fetchProducts(refresh: false);
+    }
+  }
+
+  Future<void> goToPreviousPage() async {
+    if (hasPreviousPage) {
+      _currentPage--;
+      await fetchProducts(refresh: false);
+    }
   }
 
   Future<void> fetchProducts({bool refresh = false}) async {
@@ -60,17 +79,19 @@ class ProductProvider extends ChangeNotifier {
       final response = await _dio.get(ApiConstants.products,
           queryParameters: params);
       final data = response.data['data'] as List;
-      final meta =
-          response.data['meta'] as Map<String, dynamic>?;
+      final pagination =
+          response.data['pagination'] as Map<String, dynamic>?;
 
-      final newProducts =
+      _products =
           data.map((e) => ProductModel.fromJson(e as Map<String, dynamic>)).toList();
-      _products.addAll(newProducts);
-      _lastPage = meta?['last_page'] as int? ?? 1;
-      _currentPage++;
+      _lastPage = pagination?['last_page'] as int? ?? 1;
       notifyListeners();
     } on DioException catch (e) {
       _errorMessage = e.message;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Products API Error: $e');
       notifyListeners();
     } finally {
       _setLoading(false);

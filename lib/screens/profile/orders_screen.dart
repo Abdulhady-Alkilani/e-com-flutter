@@ -5,6 +5,7 @@ import '../../core/constants/app_theme.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
 import 'order_details_screen.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -18,7 +19,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<OrderProvider>().fetchOrders();
+      context.read<OrderProvider>().fetchOrders(refresh: true);
     });
   }
 
@@ -28,9 +29,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
       appBar: AppBar(title: const Text('طلباتي')),
       body: Consumer<OrderProvider>(
         builder: (_, orderProvider, __) {
-          if (orderProvider.isLoading) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.primary));
+          if (orderProvider.isLoading && orderProvider.orders.isEmpty) {
+            return const ShimmerList();
           }
           if (orderProvider.orders.isEmpty) {
             return const Center(
@@ -47,16 +47,61 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ),
             );
           }
-          return RefreshIndicator(
-            onRefresh: () => orderProvider.fetchOrders(),
-            color: AppColors.primary,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: orderProvider.orders.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, i) =>
-                  _OrderCard(order: orderProvider.orders[i]),
-            ),
+          return Column(
+            children: [
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => orderProvider.fetchOrders(refresh: true),
+                  color: AppColors.primary,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orderProvider.orders.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) =>
+                        _OrderCard(order: orderProvider.orders[i]),
+                  ),
+                ),
+              ),
+              if (orderProvider.lastPage > 1)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: orderProvider.hasPreviousPage
+                            ? () => orderProvider.goToPreviousPage()
+                            : null,
+                        child: const Text('السابق'),
+                      ),
+                      Text(
+                        'صفحة ${orderProvider.currentPage} من ${orderProvider.lastPage}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: orderProvider.hasNextPage
+                            ? () => orderProvider.goToNextPage()
+                            : null,
+                        child: const Text('التالي'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           );
         },
       ),
