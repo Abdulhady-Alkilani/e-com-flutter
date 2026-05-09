@@ -29,6 +29,35 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
+  void _showStockError(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: AppColors.warning, size: 28),
+            const SizedBox(width: 8),
+            const Text('الكمية غير متوفرة'),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('حسناً'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
@@ -61,6 +90,16 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(title: const Text('سلة المشتريات')),
       body: Consumer<CartProvider>(
         builder: (_, cart, __) {
+          // Show error dialog when there's a stock error
+          if (cart.errorMessage != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _showStockError(cart.errorMessage!);
+                cart.clearError();
+              }
+            });
+          }
+
           if (cart.isLoading && cart.items.isEmpty) {
             return const ShimmerList();
           }
@@ -138,6 +177,14 @@ class _CartScreenState extends State<CartScreen> {
                                       color: AppColors.primary,
                                       fontWeight: FontWeight.bold),
                                 ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'المجموع: ${item.subtotal.toStringAsFixed(0)} ل.س',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -148,10 +195,13 @@ class _CartScreenState extends State<CartScreen> {
                                 children: [
                                   _QuantityBtn(
                                     icon: Icons.remove,
-                                    onTap: () {
+                                    onTap: () async {
                                       if (item.quantity > 1) {
-                                        cart.updateQuantity(
+                                        final ok = await cart.updateQuantity(
                                             item.cartItemId, item.quantity - 1);
+                                        if (!ok && mounted) {
+                                          // Error is handled via cart.errorMessage
+                                        }
                                       } else {
                                         cart.removeItem(item.cartItemId);
                                       }
@@ -167,8 +217,13 @@ class _CartScreenState extends State<CartScreen> {
                                   ),
                                   _QuantityBtn(
                                     icon: Icons.add,
-                                    onTap: () => cart.updateQuantity(
-                                        item.cartItemId, item.quantity + 1),
+                                    onTap: () async {
+                                      final ok = await cart.updateQuantity(
+                                          item.cartItemId, item.quantity + 1);
+                                      if (!ok && mounted) {
+                                        // Error is handled via cart.errorMessage
+                                      }
+                                    },
                                   ),
                                 ],
                               ),

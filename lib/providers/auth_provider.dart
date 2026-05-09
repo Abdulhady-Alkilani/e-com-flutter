@@ -17,6 +17,7 @@ class AuthProvider extends ChangeNotifier {
 
   UserModel? get currentUser => _currentUser;
   bool get isAuthenticated => _isAuthenticated;
+  bool get isGuest => !_isAuthenticated;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -47,7 +48,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Register new user
+  /// Register new user — returns Token directly (no OTP)
   Future<bool> register({
     required String name,
     required String email,
@@ -58,29 +59,22 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _setError(null);
     try {
-      await _dio.post(ApiConstants.register, data: {
+      final response = await _dio.post(ApiConstants.register, data: {
         'name': name,
         'email': email,
         'phone': phone,
         'password': password,
         'password_confirmation': passwordConfirmation,
       });
-      return true;
-    } on DioException catch (e) {
-      _setError(parseApiError(e.response?.data));
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
 
-  /// Verify OTP (email verification)
-  Future<bool> verifyOtp(String email, String code) async {
-    _setLoading(true);
-    _setError(null);
-    try {
-      await _dio.post(ApiConstants.verifyEmail,
-          data: {'email': email, 'code': code});
+      // API returns token directly after registration (no OTP)
+      final token = response.data['token'] as String;
+      final userData = response.data['user'] as Map<String, dynamic>;
+
+      await _storage.write(key: 'auth_token', value: token);
+      _currentUser = UserModel.fromJson(userData);
+      _isAuthenticated = true;
+      notifyListeners();
       return true;
     } on DioException catch (e) {
       _setError(parseApiError(e.response?.data));
@@ -125,7 +119,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Update Profile
+  /// Update Profile (uses FormData for avatar upload)
   Future<bool> updateProfile({
     String? name,
     String? email,
@@ -165,5 +159,15 @@ class AuthProvider extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Get current user profile
+  Future<void> fetchProfile() async {
+    try {
+      final response = await _dio.get(ApiConstants.me);
+      final data = response.data['data'] ?? response.data;
+      _currentUser = UserModel.fromJson(data as Map<String, dynamic>);
+      notifyListeners();
+    } catch (_) {}
   }
 }

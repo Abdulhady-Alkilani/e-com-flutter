@@ -4,7 +4,6 @@ import 'package:dio/dio.dart';
 import '../core/api/api_client.dart';
 import '../core/constants/api_constants.dart';
 import '../models/product_model.dart';
-
 class FavoriteProvider extends ChangeNotifier {
   final Dio _dio = ApiClient.instance.dio;
 
@@ -24,16 +23,31 @@ class FavoriteProvider extends ChangeNotifier {
     }
     try {
       final response = await _dio.get(ApiConstants.favorites);
-      final data = response.data['data'] as List? ?? [];
-      _favorites = data
-          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+
+      List<dynamic> data;
+      final rawData = response.data['data'];
+      if (rawData is List) {
+        data = rawData;
+      } else if (rawData is Map) {
+        data = rawData['data'] as List? ?? [];
+      } else {
+        data = (response.data is List ? response.data as List : []);
+      }
+      _favorites = [];
+      for (final e in data) {
+        try {
+          _favorites.add(ProductModel.fromJson(e as Map<String, dynamic>));
+        } catch (err) {
+          debugPrint('Error parsing favorite product: $err');
+        }
+      }
       _favoriteIds.clear();
       for (final f in _favorites) {
         _favoriteIds.add(f.id);
       }
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Favorites API Error: $e');
     } finally {
       if (!silent) {
         _isLoading = false;

@@ -52,6 +52,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _browseAsGuest() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthProvider>().isLoading;
@@ -128,6 +135,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     text: 'تسجيل الدخول',
                     onPressed: _login,
                     isLoading: isLoading),
+                const SizedBox(height: 16),
+                // Guest browse button
+                OutlinedButton.icon(
+                  onPressed: _browseAsGuest,
+                  icon: const Icon(Icons.storefront_outlined),
+                  label: const Text('تصفح كزائر'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

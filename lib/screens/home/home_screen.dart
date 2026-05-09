@@ -9,6 +9,8 @@ import '../../providers/cart_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/filter_bottom_sheet.dart';
+import '../../widgets/guest_login_dialog.dart';
 import '../../screens/cart/cart_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -53,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAuth = context.watch<AuthProvider>().isAuthenticated;
+
     final List<Widget> screens = [
       const _HomeTab(),
       const _FavoriteTab(),
@@ -67,6 +71,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          if (!isAuth) {
+            showGuestLoginDialog(context,
+                message: 'يجب تسجيل الدخول لعرض السلة');
+            return;
+          }
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const CartScreen()),
@@ -85,6 +94,12 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_, cart, __) => BottomNavigationBar(
           currentIndex: _bottomNavIndex,
           onTap: (i) {
+            // Check if guest trying to access favorites or profile
+            if (!isAuth && i > 0) {
+              showGuestLoginDialog(context,
+                  message: 'يجب تسجيل الدخول للوصول إلى هذه الميزة');
+              return;
+            }
             setState(() => _bottomNavIndex = i);
             _pageController.animateToPage(
               i,
@@ -129,12 +144,40 @@ class _HomeTabState extends State<_HomeTab> {
     super.dispose();
   }
 
+  void _showFilterSheet() {
+    final prodProvider = context.read<ProductProvider>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => FilterBottomSheet(
+        currentFilters: FilterOptions(
+          minPrice: prodProvider.minPrice,
+          maxPrice: prodProvider.maxPrice,
+          inStock: prodProvider.inStockOnly,
+          sortBy: prodProvider.sortBy,
+          sortOrder: prodProvider.sortOrder,
+          categoryId: prodProvider.selectedCategoryId,
+        ),
+        onApply: (options) {
+          prodProvider.applyFilters(options);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('app_name')),
         actions: [
+          // Filter button
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'فلترة وفرز',
+            onPressed: _showFilterSheet,
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: context.tr('network_settings'),
@@ -228,7 +271,9 @@ class _HomeTabState extends State<_HomeTab> {
                     }
                     final cat = prod.categories[i - 1];
                     return _CategoryChip(
-                      label: cat.name,
+                      label: cat.productsCount > 0
+                          ? '${cat.name} (${cat.productsCount})'
+                          : cat.name,
                       isSelected: prod.selectedCategoryId == cat.id,
                       onTap: () => prod.filterByCategory(cat.id),
                     );
@@ -404,7 +449,6 @@ class _FavoriteTabState extends State<_FavoriteTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthProvider>();
       if (auth.isAuthenticated) {
-        // ✅ FIX: use correct type FavoriteProvider instead of dynamic
         context.read<FavoriteProvider>().fetchFavorites();
       }
     });
@@ -438,7 +482,6 @@ class _FavoriteTabState extends State<_FavoriteTab> {
       );
     }
 
-    // ✅ FIX: use correct Consumer<FavoriteProvider> and display actual favorites list
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('favorites')),

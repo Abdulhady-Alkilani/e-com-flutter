@@ -25,6 +25,11 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> fetchCart() async {
     _setLoading(true);
     try {
@@ -44,24 +49,24 @@ class CartProvider extends ChangeNotifier {
   }
 
   Future<bool> addToCart(int productId, {int quantity = 1}) async {
+    _errorMessage = null;
     try {
       await _dio.post(ApiConstants.cart,
           data: {'product_id': productId, 'quantity': quantity});
       await fetchCart();
       return true;
     } on DioException catch (e) {
-      // Handle 422 out-of-stock error explicitly
-      final errors = e.response?.data?['errors'];
-      if (e.response?.statusCode == 422 && errors != null) {
-        if (errors['stock'] != null) {
-          _errorMessage = 'المنتج غير متوفر في المخزون';
-        } else if (errors['cart'] != null) {
-          _errorMessage = 'السلة فارغة';
-        } else {
-          _errorMessage = 'خطأ في البيانات المدخلة';
-        }
+      final statusCode = e.response?.statusCode;
+      final message = e.response?.data?['message'] as String?;
+
+      if (statusCode == 422) {
+        // Quantity not available — show API message directly (Arabic)
+        _errorMessage = message ?? 'الكمية المطلوبة غير متوفرة';
+      } else if (statusCode == 400) {
+        // Product unavailable
+        _errorMessage = message ?? 'المنتج غير متاح حالياً';
       } else {
-        _errorMessage = e.message;
+        _errorMessage = message ?? 'حدث خطأ غير متوقع';
       }
       notifyListeners();
       return false;
@@ -69,6 +74,7 @@ class CartProvider extends ChangeNotifier {
   }
 
   Future<bool> updateQuantity(int cartItemId, int quantity) async {
+    _errorMessage = null;
     try {
       await _dio.put('${ApiConstants.cart}/$cartItemId',
           data: {'quantity': quantity});
@@ -79,7 +85,14 @@ class CartProvider extends ChangeNotifier {
         notifyListeners();
       }
       return true;
-    } catch (_) {
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'] as String?;
+      if (e.response?.statusCode == 422) {
+        _errorMessage = message ?? 'الكمية المطلوبة غير متوفرة';
+      } else {
+        _errorMessage = message ?? 'حدث خطأ غير متوقع';
+      }
+      notifyListeners();
       return false;
     }
   }

@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../core/constants/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
-import 'auth/login_screen.dart';
 import 'home/home_screen.dart';
 import 'settings/network_settings_screen.dart';
 import 'package:shimmer/shimmer.dart';
@@ -43,13 +42,10 @@ class _SplashScreenState extends State<SplashScreen>
     context.read<SettingsProvider>().fetchSettings();
 
     if (!mounted) return;
+    // Always navigate to HomeScreen — supports guest mode
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => authProvider.isAuthenticated
-            ? const HomeScreen()
-            : const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
   }
 

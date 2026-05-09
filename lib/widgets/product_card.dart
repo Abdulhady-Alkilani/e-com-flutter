@@ -8,6 +8,7 @@ import '../providers/cart_provider.dart';
 import '../providers/favorite_provider.dart';
 import '../providers/auth_provider.dart';
 import '../screens/home/product_details_screen.dart';
+import 'guest_login_dialog.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -75,10 +76,8 @@ class ProductCard extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () {
                       if (!authProvider.isAuthenticated) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('يجب تسجيل الدخول أولاً')),
-                        );
+                        showGuestLoginDialog(context,
+                            message: 'يجب تسجيل الدخول لإضافة المنتجات للمفضلة');
                         return;
                       }
                       context
@@ -106,6 +105,28 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Stock badge
+                if (!product.inStock)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'نفذ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
             // ─── Product Info ──────────────────────────────────────────────
@@ -139,9 +160,17 @@ class ProductCard extends StatelessWidget {
                       GestureDetector(
                         onTap: () {
                           if (!authProvider.isAuthenticated) {
+                            showGuestLoginDialog(context,
+                                message:
+                                    'يجب تسجيل الدخول لإضافة المنتجات للسلة');
+                            return;
+                          }
+                          if (!product.inStock) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('يجب تسجيل الدخول أولاً')),
+                                content: Text('المنتج غير متوفر حالياً'),
+                                backgroundColor: AppColors.error,
+                              ),
                             );
                             return;
                           }
@@ -156,7 +185,9 @@ class ProductCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: AppColors.primary,
+                            color: product.inStock
+                                ? AppColors.primary
+                                : Colors.grey,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(Icons.add_shopping_cart,

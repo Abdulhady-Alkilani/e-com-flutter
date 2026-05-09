@@ -10,6 +10,8 @@ import '../../providers/favorite_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/shimmer_loading.dart';
+import '../../widgets/size_selector_widget.dart';
+import '../../widgets/guest_login_dialog.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final int productId;
@@ -24,6 +26,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   ProductModel? _product;
   bool _isLoading = true;
   int _selectedImageIndex = 0;
+  int _quantity = 1;
+  ProductSize? _selectedSize;
   late final PageController _imagePageController;
 
   @override
@@ -87,9 +91,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
               onPressed: () {
                 if (!isAuth) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('يجب تسجيل الدخول أولاً')),
-                  );
+                  showGuestLoginDialog(context,
+                      message: 'يجب تسجيل الدخول لإضافة المنتجات للمفضلة');
                   return;
                 }
                 context.read<FavoriteProvider>().toggleFavorite(product.id);
@@ -194,15 +197,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: product.stock > 0
+                        color: product.inStock
                             ? AppColors.success.withValues(alpha: 0.15)
                             : AppColors.error.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        product.stock > 0 ? 'متوفر' : 'نفذت الكمية',
+                        product.inStock ? 'متوفر' : 'نفذت الكمية',
                         style: TextStyle(
-                          color: product.stock > 0
+                          color: product.inStock
                               ? AppColors.success
                               : AppColors.error,
                           fontWeight: FontWeight.bold,
@@ -212,6 +215,40 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ),
                   ],
                 ),
+
+                // ─── Category badge ─────────────────────────────────────
+                if (product.category != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      product.category!.name,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+
+                // ─── Size Selector ─────────────────────────────────────
+                if (product.hasSizes) ...[
+                  const SizedBox(height: 20),
+                  SizeSelectorWidget(
+                    sizes: product.sizes!,
+                    onSizeSelected: (size) {
+                      setState(() => _selectedSize = size);
+                    },
+                  ),
+                ],
+
+                // ─── Description ────────────────────────────────────────
                 if (product.description != null) ...[
                   const SizedBox(height: 20),
                   const Text('الوصف',
@@ -228,33 +265,142 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         height: 1.6),
                   ),
                 ],
+
+                // ─── Stock info ─────────────────────────────────────────
+                if (product.inStock) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.inventory_2_outlined,
+                          size: 18, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'المخزون الكلي: ${product.stock}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                // ─── Quantity selector ──────────────────────────────────
+                if (product.inStock) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text(
+                        'الكمية:',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      _buildQuantityButton(
+                        icon: Icons.remove,
+                        onTap: _quantity > 1
+                            ? () => setState(() => _quantity--)
+                            : null,
+                      ),
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          '$_quantity',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      _buildQuantityButton(
+                        icon: Icons.add,
+                        onTap: _quantity < product.stock
+                            ? () => setState(() => _quantity++)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ],
+
                 const SizedBox(height: 32),
-                if (product.stock > 0)
+
+                // ─── Add to Cart button ─────────────────────────────────
+                if (product.inStock)
                   Consumer<CartProvider>(
-                    builder: (_, cart, __) => CustomButton(
-                      text: 'أضف إلى السلة',
-                      icon: Icons.add_shopping_cart,
-                      isLoading: cart.isLoading,
-                      onPressed: () async {
-                        if (!isAuth) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('يجب تسجيل الدخول أولاً')),
-                          );
-                          return;
-                        }
-                        final ok = await context
-                            .read<CartProvider>()
-                            .addToCart(product.id);
-                        if (mounted && ok) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('تمت الإضافة للسلة ✅'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
-                        }
-                      },
+                    builder: (_, cart, __) {
+                      // Show error message if any
+                      if (cart.errorMessage != null) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(cart.errorMessage!),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            cart.clearError();
+                          }
+                        });
+                      }
+
+                      return CustomButton(
+                        text: 'أضف إلى السلة',
+                        icon: Icons.add_shopping_cart,
+                        isLoading: cart.isLoading,
+                        onPressed: () async {
+                          if (!isAuth) {
+                            showGuestLoginDialog(context,
+                                message:
+                                    'يجب تسجيل الدخول لإضافة المنتجات للسلة');
+                            return;
+                          }
+                          // If product has sizes and none selected
+                          if (product.hasSizes && _selectedSize == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('يرجى اختيار المقاس أولاً'),
+                                backgroundColor: AppColors.warning,
+                              ),
+                            );
+                            return;
+                          }
+                          final ok = await context
+                              .read<CartProvider>()
+                              .addToCart(product.id, quantity: _quantity);
+                          if (mounted && ok) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('تمت الإضافة للسلة ✅'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+
+                if (!product.inStock)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'هذا المنتج غير متوفر حالياً',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
               ],
@@ -262,6 +408,30 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildQuantityButton({
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: onTap != null ? AppColors.primary : AppColors.border,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: onTap != null ? AppColors.primary : AppColors.border,
+        ),
+      ),
     );
   }
 }

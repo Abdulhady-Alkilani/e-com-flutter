@@ -8,10 +8,10 @@ class ApiConstants {
 
   // ─── Auth Endpoints ───────────────────────────────────────────────────────
   static const String register = '/register';
-  static const String verifyEmail = '/verify-email';
   static const String login = '/login';
   static const String logout = '/logout';
   static const String me = '/me';
+  static const String profileUpdate = '/profile/update';
 
   // ─── Settings Endpoints ───────────────────────────────────────────────────
   static const String settings = '/settings';
@@ -39,7 +39,7 @@ class AppStrings {
   static const String password = 'كلمة المرور';
   static const String phone = 'رقم الجوال';
   static const String name = 'الاسم الكامل';
-  static const String verifyOtp = 'التحقق من الرمز';
+  static const String browseAsGuest = 'تصفح كزائر';
   static const String home = 'الرئيسية';
   static const String cart = 'السلة';
   static const String favorites = 'المفضلة';

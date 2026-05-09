@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/favorite_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
-import 'verify_otp_screen.dart';
+import '../home/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -44,12 +46,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
     if (!mounted) return;
     if (success) {
-      Navigator.pushReplacement(
+      // Registration returns token directly — navigate to home
+      context.read<CartProvider>().fetchCart();
+      context.read<FavoriteProvider>().fetchFavorites();
+      Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) =>
-              VerifyOtpScreen(email: _emailCtrl.text.trim()),
-        ),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
