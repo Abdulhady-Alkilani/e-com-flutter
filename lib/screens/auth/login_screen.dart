@@ -160,9 +160,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const RegisterScreen())),
                       child: const Text('إنشاء حساب',
-                          style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold)),
+                           style: TextStyle(
+                               color: AppColors.textPrimary,
+                               fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),

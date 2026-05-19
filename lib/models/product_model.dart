@@ -29,8 +29,9 @@ class ProductSize {
 class ProductImage {
   final int id;
   final String imagePath;
+  final String? color;
 
-  ProductImage({required this.id, required this.imagePath});
+  ProductImage({required this.id, required this.imagePath, this.color});
 
   factory ProductImage.fromJson(Map<String, dynamic> json) {
     String rawPath = json['image_path'] as String? ?? '';
@@ -47,6 +48,7 @@ class ProductImage {
     return ProductImage(
       id: _parseInt(json['id']),
       imagePath: rawPath,
+      color: json['color'] as String?,
     );
   }
 }
@@ -60,9 +62,11 @@ class ProductModel {
   final int stock;
   final bool inStock;
   final String? mainImage;
+  final String? mainImageColor;
   final bool isActive;
   final List<ProductImage> images;
   final List<ProductSize>? sizes;
+  final List<String>? colors;
   final CategoryModel? category;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -76,9 +80,11 @@ class ProductModel {
     required this.stock,
     this.inStock = false,
     this.mainImage,
+    this.mainImageColor,
     this.isActive = true,
     this.images = const [],
     this.sizes,
+    this.colors,
     this.category,
     this.createdAt,
     this.updatedAt,
@@ -127,12 +133,16 @@ class ProductModel {
       stock: _parseInt(json['stock']),
       inStock: json['in_stock'] == true || json['in_stock'] == 1 || _parseInt(json['stock']) > 0,
       mainImage: sanitizeUrl(json['main_image']?.toString()),
+      mainImageColor: json['main_image_color'] as String?,
       isActive: json['is_active'] == true || json['is_active'] == 1,
       images: imagesList
               ?.map((e) => ProductImage.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       sizes: parsedSizes,
+      colors: (json['colors'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
       category: parsedCategory,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
@@ -144,6 +154,14 @@ class ProductModel {
   }
 
   bool get hasSizes => sizes != null && sizes!.isNotEmpty;
+
+  bool get hasColors => colors != null && colors!.isNotEmpty;
+
+  String? imageUrlForColor(String color) {
+    if (mainImageColor == color && mainImage != null) return mainImage;
+    final match = images.where((img) => img.color == color);
+    return match.isNotEmpty ? match.first.imagePath : null;
+  }
 
   List<ProductSize> get availableSizes =>
       sizes?.where((s) => s.isAvailable).toList() ?? [];

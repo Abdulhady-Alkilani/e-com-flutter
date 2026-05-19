@@ -43,11 +43,13 @@ class CartItemModel {
   final int cartItemId;
   final CartItemProduct product;
   int quantity;
+  final String? selectedColor;
 
   CartItemModel({
     required this.cartItemId,
     required this.product,
     required this.quantity,
+    this.selectedColor,
   });
 
   double get subtotal => product.price * quantity;
@@ -59,6 +61,7 @@ class CartItemModel {
         json['product'] as Map<String, dynamic>,
       ),
       quantity: json['quantity'] as int,
+      selectedColor: json['selected_color'] as String?,
     );
   }
 }

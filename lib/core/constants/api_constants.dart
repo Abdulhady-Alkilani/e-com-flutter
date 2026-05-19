@@ -2,7 +2,7 @@
 
 class ApiConstants {
   // ─── Base Configuration ───────────────────────────────────────────────────
-  static const String defaultIp = '10.140.183.183';
+  static const String defaultIp = '10.144.3.183';
   static const String defaultPort = '8000';
   static String get baseUrl => 'http://$defaultIp:$defaultPort/api';
 

@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/shimmer_loading.dart';
 import '../../widgets/size_selector_widget.dart';
+import '../../screens/cart/cart_screen.dart';
 import '../../widgets/guest_login_dialog.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _selectedImageIndex = 0;
   int _quantity = 1;
   ProductSize? _selectedSize;
+  String? _selectedColor;
   late final PageController _imagePageController;
 
   @override
@@ -76,6 +78,27 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final isFav = context.watch<FavoriteProvider>().isFavorite(product.id);
     final isAuth = context.read<AuthProvider>().isAuthenticated;
 
+    void selectColor(String color) {
+      final targetImage = product.imageUrlForColor(color);
+      int targetIndex = -1;
+      if (targetImage != null) {
+        targetIndex = allImages.indexOf(targetImage);
+      }
+      setState(() {
+        _selectedColor = color;
+        if (targetIndex >= 0) {
+          _selectedImageIndex = targetIndex;
+        }
+      });
+      if (targetIndex >= 0) {
+        _imagePageController.animateToPage(
+          targetIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+
     return CustomScrollView(
       slivers: [
         // ─── App Bar with Image ──────────────────────────────────────────
@@ -84,6 +107,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           pinned: true,
           backgroundColor: AppColors.primary,
           actions: [
+            Consumer<CartProvider>(
+              builder: (_, cart, __) => IconButton(
+                icon: Badge(
+                  label: Text('${cart.itemCount}'),
+                  isLabelVisible: cart.itemCount > 0,
+                  child: const Icon(Icons.shopping_cart, color: Colors.white),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CartScreen()),
+                  );
+                },
+              ),
+            ),
             IconButton(
               icon: Icon(
                 isFav ? Icons.favorite : Icons.favorite_border,
@@ -248,6 +286,40 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   ),
                 ],
 
+                // ─── Color Selector ─────────────────────────────────────
+                if (product.hasColors) ...[
+                  const SizedBox(height: 20),
+                  const Text('اللون',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: product.colors!.map((color) {
+                      final isSelected = _selectedColor == color;
+                      return ChoiceChip(
+                        label: Text(color),
+                        selected: isSelected,
+                        onSelected: (_) {
+                          if (isSelected) {
+                            setState(() => _selectedColor = null);
+                          } else {
+                            selectColor(color);
+                          }
+                        },
+                        selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                        side: BorderSide(
+                          color: isSelected ? AppColors.primary : AppColors.border,
+                          width: isSelected ? 2 : 1,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+
                 // ─── Description ────────────────────────────────────────
                 if (product.description != null) ...[
                   const SizedBox(height: 20),
@@ -369,9 +441,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             );
                             return;
                           }
+                          if (product.hasColors && _selectedColor == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('يرجى اختيار اللون أولاً'),
+                                backgroundColor: AppColors.warning,
+                              ),
+                            );
+                            return;
+                          }
                           final ok = await context
                               .read<CartProvider>()
-                              .addToCart(product.id, quantity: _quantity);
+                              .addToCart(
+                                product.id,
+                                quantity: _quantity,
+                                selectedColor: _selectedColor,
+                              );
                           if (mounted && ok) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

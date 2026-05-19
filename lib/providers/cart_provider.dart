@@ -48,11 +48,17 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> addToCart(int productId, {int quantity = 1}) async {
+  Future<bool> addToCart(int productId, {int quantity = 1, String? selectedColor}) async {
     _errorMessage = null;
     try {
-      await _dio.post(ApiConstants.cart,
-          data: {'product_id': productId, 'quantity': quantity});
+      final data = <String, dynamic>{
+        'product_id': productId,
+        'quantity': quantity,
+      };
+      if (selectedColor != null) {
+        data['selected_color'] = selectedColor;
+      }
+      await _dio.post(ApiConstants.cart, data: data);
       await fetchCart();
       return true;
     } on DioException catch (e) {

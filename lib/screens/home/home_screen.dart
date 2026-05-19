@@ -9,7 +9,6 @@ import '../../providers/cart_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/product_card.dart';
-import '../../widgets/filter_bottom_sheet.dart';
 import '../../widgets/guest_login_dialog.dart';
 import '../../screens/cart/cart_screen.dart';
 import '../../screens/profile/profile_screen.dart';
@@ -64,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: PageView(
         controller: _pageController,
         onPageChanged: (i) => setState(() => _bottomNavIndex = i),
@@ -144,40 +144,13 @@ class _HomeTabState extends State<_HomeTab> {
     super.dispose();
   }
 
-  void _showFilterSheet() {
-    final prodProvider = context.read<ProductProvider>();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => FilterBottomSheet(
-        currentFilters: FilterOptions(
-          minPrice: prodProvider.minPrice,
-          maxPrice: prodProvider.maxPrice,
-          inStock: prodProvider.inStockOnly,
-          sortBy: prodProvider.sortBy,
-          sortOrder: prodProvider.sortOrder,
-          categoryId: prodProvider.selectedCategoryId,
-        ),
-        onApply: (options) {
-          prodProvider.applyFilters(options);
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(context.tr('app_name')),
         actions: [
-          // Filter button
-          IconButton(
-            icon: const Icon(Icons.tune),
-            tooltip: 'فلترة وفرز',
-            onPressed: _showFilterSheet,
-          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: context.tr('network_settings'),

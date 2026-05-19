@@ -171,13 +171,32 @@ class _CartScreenState extends State<CartScreen> {
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14)),
                                 const SizedBox(height: 4),
-                                Text(
-                                  '${item.product.price.toStringAsFixed(0)} ل.س',
-                                  style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 2),
+                                 Text(
+                                   '${item.product.price.toStringAsFixed(0)} ل.س',
+                                   style: const TextStyle(
+                                       color: AppColors.primary,
+                                       fontWeight: FontWeight.bold),
+                                 ),
+                                 if (item.selectedColor != null) ...[
+                                   const SizedBox(height: 2),
+                                   Container(
+                                     padding: const EdgeInsets.symmetric(
+                                         horizontal: 8, vertical: 2),
+                                     decoration: BoxDecoration(
+                                       color: AppColors.primary.withValues(alpha: 0.08),
+                                       borderRadius: BorderRadius.circular(6),
+                                     ),
+                                     child: Text(
+                                       'اللون: ${item.selectedColor}',
+                                       style: const TextStyle(
+                                         color: AppColors.primary,
+                                         fontSize: 11,
+                                         fontWeight: FontWeight.w500,
+                                       ),
+                                     ),
+                                   ),
+                                 ],
+                                 const SizedBox(height: 2),
                                 Text(
                                   'المجموع: ${item.subtotal.toStringAsFixed(0)} ل.س',
                                   style: const TextStyle(
